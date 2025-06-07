@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Football Studio</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f0f4f8;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+    }
+    .stats {
+      margin-top: 20px;
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #ccc;
+      display: inline-block;
+      text-align: left;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+    }
+    input {
+      padding: 8px;
+      font-size: 16px;
+      width: 100px;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚽ Football Studio - Verificador</h1>
+  <p>
+    <strong>Sinal:</strong>
+    <select id="sinal">
+      <option value="Casa">Casa</option>
+      <option value="Visitante">Visitante</option>
+    </select>
+    <input type="number" id="rodada" placeholder="Rodada" min="1" />
+    <button onclick="registrarRodada()">Registrar</button>
+  </p>
+
+  <div class="stats" id="estatisticas">
+    📊 <strong>Estatísticas</strong><br>
+    ✅ Greens totais: <span id="greensTotais">0</span><br>
+    🟢 Greens diretos: <span id="greensDiretos">0</span><br>
+    🔁 Greens no Gale 1: <span id="greensGale1">0</span><br>
+    ❌ Reds nas últimas 24h: <span id="redsTotais">0</span><br>
+    🚫 Reds seguidos nas últimas 24h: <span id="redsSeguidos">0</span><br>
+    🔴 Recorde de reds seguidos: <span id="maiorSequenciaReds">0</span><br>
+    📈 Assertividade: <span id="assertividade">0%</span>
+  </div>
+
+  <h3>📋 Histórico</h3>
+  <ul id="historico"></ul>
+
+  <br>
+  <button onclick="resetar()">🔄 Resetar tudo</button>
+
+  <script>
+    let stats = {
+      greensTotais: 0,
+      greensDiretos: 0,
+      greensGale1: 0,
+      redsTotais: 0,
+      redsSeguidos: 0,
+      maiorSequenciaReds: 0,
+      totalEntradas: 0,
+      historicoReds: [],
+    };
+
+    let martingale = false;
+    let rodadaAtual = 0;
+
+    function registrarRodada() {
+      const sinal = document.getElementById("sinal").value;
+      const rodada = document.getElementById("rodada").value;
+      if (!rodada) return alert("Digite o número da rodada.");
+
+      const resultado = prompt(`Resultado da rodada ${rodada} (Casa, Visitante ou Empate):`);
+
+      if (!resultado || !["casa", "visitante", "empate"].includes(resultado.toLowerCase())) {
+        return alert("Resultado inválido.");
+      }
+
+      rodadaAtual++;
+      const res = resultado.toLowerCase();
+      const sig = sinal.toLowerCase();
+      const empate = res === "empate";
+
+      let green = false;
+      let gale = false;
+
+      if (res === sig || empate) {
+        green = true;
+        stats.greensTotais++;
+        stats.greensDiretos++;
+      } else {
+        martingale = true;
+        const resultadoGale = prompt("Resultado do Martingale 1 (Casa, Visitante ou Empate):");
+
+        if (!resultadoGale || !["casa", "visitante", "empate"].includes(resultadoGale.toLowerCase())) {
+          return alert("Resultado inválido do Gale.");
+        }
+
+        const resGale = resultadoGale.toLowerCase();
+
+        if (resGale === sig || resGale === "empate") {
+          green = true;
+          gale = true;
+          stats.greensTotais++;
+          stats.greensGale1++;
+        } else {
+          stats.redsTotais++;
+          stats.greensDiretos = 0;
+          stats.greensGale1 = 0;
+          stats.historicoReds.push(Date.now());
+
+          stats.redsSeguidos++;
+          if (stats.redsSeguidos > stats.maiorSequenciaReds) {
+            stats.maiorSequenciaReds = stats.redsSeguidos;
+          }
+        }
+      }
+
+      if (green) {
+        stats.redsSeguidos = 0;
+      }
+
+      stats.totalEntradas++;
+
+      const li = document.createElement("li");
+      li.textContent = `Rodada ${rodada} | Sinal: ${sinal} | Resultado: ${resultado}${martingale && gale ? " (Gale 1 ✅)" : green ? " ✅" : " ❌"}`;
+      document.getElementById("historico").prepend(li);
+
+      atualizarEstatisticas();
+    }
+
+    function atualizarEstatisticas() {
+      const {
+        greensTotais,
+        greensDiretos,
+        greensGale1,
+        redsTotais,
+        redsSeguidos,
+        maiorSequenciaReds,
+        totalEntradas,
+        historicoReds,
+      } = stats;
+
+      const ultimas24h = Date.now() - 24 * 60 * 60 * 1000;
+      const reds24h = historicoReds.filter((t) => t >= ultimas24h).length;
+
+      const assertividade = totalEntradas
+        ? ((greensTotais / totalEntradas) * 100).toFixed(2)
+        : 0;
+
+      document.getElementById("greensTotais").textContent = greensTotais;
+      document.getElementById("greensDiretos").textContent = greensDiretos;
+      document.getElementById("greensGale1").textContent = greensGale1;
+      document.getElementById("redsTotais").textContent = reds24h;
+      document.getElementById("redsSeguidos").textContent = redsSeguidos;
+      document.getElementById("maiorSequenciaReds").textContent = maiorSequenciaReds;
+      document.getElementById("assertividade").textContent = `${assertividade}%`;
+    }
+
+    function resetar() {
+      if (!confirm("Deseja resetar todas as estatísticas?")) return;
+      stats = {
+        greensTotais: 0,
+        greensDiretos: 0,
+        greensGale1: 0,
+        redsTotais: 0,
+        redsSeguidos: 0,
+        maiorSequenciaReds: 0,
+        totalEntradas: 0,
+        historicoReds: [],
+      };
+      document.getElementById("historico").innerHTML = "";
+      atualizarEstatisticas();
+    }
+
+    atualizarEstatisticas();
+  </script>
+</body>
+</html>
