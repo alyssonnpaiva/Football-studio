@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Verificador Football Studio</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #f4f4f4;
+      text-align: center;
+      padding: 20px;
+    }
+    h1 { margin-bottom: 20px; }
+    button {
+      padding: 15px 25px;
+      margin: 10px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      color: #fff;
+    }
+    .vermelho { background-color: #e74c3c; }
+    .azul { background-color: #3498db; }
+    .amarelo { background-color: #f1c40f; color: #000; }
+    .reset { background-color: #7f8c8d; color: #fff; margin-top: 20px; }
+    .painel {
+      background: #fff;
+      margin-top: 25px;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 5px rgba(0,0,0,0.1);
+    }
+    input {
+      padding: 10px;
+      font-size: 16px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    .linha-stats {
+      font-size: 18px;
+      margin: 8px 0;
+    }
+    .linha-stats strong {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>⚽ Verificador Football Studio</h1>
+
+  <!-- Campo para número da rodada -->
+  <div>
+    <label for="rodada"><strong>📍 Número da rodada:</strong></label><br>
+    <input type="text" id="rodada" placeholder="Ex: 135">
+  </div>
+
+  <div id="etapa">1️⃣ Escolha o <strong>SINAL</strong> recebido:</div>
+
+  <div>
+    <button class="vermelho" onclick="registrarSinal('Casa')">🔴 Casa</button>
+    <button class="azul" onclick="registrarSinal('Visitante')">🔵 Visitante</button>
+  </div>
+
+  <div id="resultadoRodada" style="display:none;">
+    <div style="margin-top:20px;">2️⃣ Resultado da <strong>Rodada</strong>:</div>
+    <button class="vermelho" onclick="registrarResultado('Casa')">🔴 Casa</button>
+    <button class="azul" onclick="registrarResultado('Visitante')">🔵 Visitante</button>
+    <button class="amarelo" onclick="registrarResultado('Empate')">🟡 Empate</button>
+  </div>
+
+  <div class="painel">
+    <h2>📈 Estatísticas</h2>
+    <div class="linha-stats">✅ <strong>GREENs Totais:</strong> <span id="greens">0</span></div>
+    <div class="linha-stats">🎯 <strong>GREENs Diretos:</strong> <span id="diretos">0</span></div>
+    <div class="linha-stats">🔁 <strong>GREENs no Gale 1:</strong> <span id="gales">0</span></div>
+    <div class="linha-stats">❌ <strong>REDs em 24h:</strong> <span id="redsTotais">0</span></div>
+    <div class="linha-stats">💥 <strong>Reds Seguidos (24h):</strong> <span id="redsSeguidos">0</span></div>
+    <div class="linha-stats">🔥 <strong>Maior sequência de Reds:</strong> <span id="maiorRed">0</span></div>
+    <div class="linha-stats">📊 <strong>Assertividade:</strong> <span id="assertividade">0%</span></div>
+
+    <button class="reset" onclick="resetarTudo()">🧹 Resetar Tudo</button>
+  </div>
+
+  <script>
+    let stats = JSON.parse(localStorage.getItem('fs_stats')) || {
+      total: 0,
+      greens: 0,
+      diretos: 0,
+      gales: 0,
+      reds: 0,
+      redSeguidos: 0,
+      maiorRed: 0,
+      sinal: '',
+      rodada: '',
+      gale: false
+    };
+
+    atualizarEstatisticas();
+
+    function salvarStats() {
+      localStorage.setItem('fs_stats', JSON.stringify(stats));
+    }
+
+    function registrarSinal(valor) {
+      const rodada = document.getElementById('rodada').value || "sem número";
+      stats.sinal = valor;
+      stats.rodada = rodada;
+      stats.gale = false;
+      document.getElementById('etapa').innerText = `✅ Sinal: ${valor} | Rodada: ${rodada}. Agora, informe o resultado:`;
+      document.getElementById('resultadoRodada').style.display = 'block';
+      document.getElementById('rodada').value = '';
+    }
+
+    function registrarResultado(resultado) {
+      const { sinal, gale } = stats;
+      let acerto = false;
+
+      if (resultado === 'Empate') {
+        acerto = true;
+      } else if (resultado === sinal) {
+        acerto = true;
+      }
+
+      if (acerto) {
+        registrarGreen(gale);
+      } else if (!gale) {
+        stats.gale = true;
+        document.getElementById('etapa').innerText = `❌ Rodada deu red. Informe o resultado do Martingale 1:`;
+      } else {
+        registrarRed();
+      }
+    }
+
+    function registrarGreen(usouGale) {
+      stats.total++;
+      stats.greens++;
+      if (usouGale) {
+        stats.gales++;
+      } else {
+        stats.diretos++;
+      }
+      stats.redSeguidos = 0;
+      atualizarEstatisticas();
+      salvarStats();
+      resetarEtapa("✅ GREEN! Comece novo sinal:");
+    }
+
+    function registrarRed() {
+      stats.total++;
+      stats.reds++;
+      stats.redSeguidos++;
+      if (stats.redSeguidos > stats.maiorRed) {
+        stats.maiorRed = stats.redSeguidos;
+      }
+      atualizarEstatisticas();
+      salvarStats();
+      resetarEtapa("❌ RED! Comece novo sinal:");
+    }
+
+    function atualizarEstatisticas() {
+      const { total, greens, diretos, gales, reds, redSeguidos, maiorRed } = stats;
+      const assert = total > 0 ? ((greens / total) * 100).toFixed(1) : 0;
+      document.getElementById('assertividade').innerText = `${assert}%`;
+      document.getElementById('greens').innerText = greens;
+      document.getElementById('diretos').innerText = diretos;
+      document.getElementById('gales').innerText = gales;
+      document.getElementById('redsTotais').innerText = reds;
+      document.getElementById('redsSeguidos').innerText = redSeguidos;
+      document.getElementById('maiorRed').innerText = maiorRed;
+    }
+
+    function resetarEtapa(msg) {
+      document.getElementById('etapa').innerText = msg;
+      document.getElementById('resultadoRodada').style.display = 'none';
+    }
+
+    function resetarTudo() {
+      if (confirm("Tem certeza que deseja apagar todos os dados?")) {
+        stats = {
+          total: 0,
+          greens: 0,
+          diretos: 0,
+          gales: 0,
+          reds: 0,
+          redSeguidos: 0,
+          maiorRed: 0,
+          sinal: '',
+          rodada: '',
+          gale: false
+        };
+        salvarStats();
+        atualizarEstatisticas();
+        resetarEtapa("🔄 Sistema reiniciado. Comece novo sinal:");
+      }
+    }
+  </script>
+
+</body>
+</html>
