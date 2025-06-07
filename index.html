@@ -7,172 +7,183 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      background-color: #e6ecf0;
+      background-color: #f1f5f9;
       text-align: center;
+      margin: 0;
       padding: 20px;
     }
-
     h1 {
-      margin-top: 10px;
+      margin-top: 0;
     }
-
     button {
-      font-size: 16px;
       padding: 10px 20px;
       margin: 10px;
+      font-size: 16px;
       border: none;
+      border-radius: 8px;
       color: white;
       cursor: pointer;
-      border-radius: 5px;
     }
-
-    .casa {
-      background-color: red;
-    }
-
-    .visitante {
-      background-color: blue;
-    }
-
-    .estatisticas {
+    .btn-casa { background-color: red; }
+    .btn-visitante { background-color: blue; }
+    .btn-resultado { margin: 5px; }
+    .btn-result-casa { background-color: red; }
+    .btn-result-visitante { background-color: blue; }
+    .btn-result-empate { background-color: goldenrod; }
+    .stats-box {
       background-color: white;
-      border-radius: 10px;
+      border-radius: 12px;
       padding: 15px;
       margin-top: 20px;
       display: inline-block;
       text-align: left;
     }
-
-    #historico {
+    .history {
       margin-top: 20px;
+      text-align: center;
     }
-
-    .reset {
-      margin-top: 20px;
-      background-color: #ccc;
-      color: black;
+    .reset-btn {
+      background-color: #64748b;
+      color: white;
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
+
   <h1>⚽ Football Studio - Verificador</h1>
 
   <div>
-    <button class="casa" onclick="registrar('Casa')">Casa</button>
-    <button class="visitante" onclick="registrar('Visitante')">Visitante</button>
+    <button class="btn-casa" onclick="registrarSinal('Casa')">Casa</button>
+    <button class="btn-visitante" onclick="registrarSinal('Visitante')">Visitante</button>
   </div>
 
-  <div class="estatisticas">
+  <div id="resultado-opcoes" style="display:none;">
+    <p>Rodada <span id="rodada-num"></span>: Qual foi o resultado?</p>
+    <button class="btn-resultado btn-result-casa" onclick="registrarResultado('Casa')">Casa</button>
+    <button class="btn-resultado btn-result-visitante" onclick="registrarResultado('Visitante')">Visitante</button>
+    <button class="btn-resultado btn-result-empate" onclick="registrarResultado('Empate')">Empate</button>
+  </div>
+
+  <div class="stats-box">
     <h3>📊 Estatísticas</h3>
-    <p>✅ Greens totais: <span id="greensTotais">0</span></p>
+    <p>✅ Greens totais: <span id="greens">0</span></p>
     <p>🟢 Greens diretos: <span id="greensDiretos">0</span></p>
-    <p>🔵 Greens no Gale 1: <span id="greensGale1">0</span></p>
+    <p>🧊 Greens no Gale 1: <span id="greensGale1">0</span></p>
     <p>❌ Reds nas últimas 24h: <span id="reds24h">0</span></p>
-    <p>🚫 Reds seguidos nas últimas 24h: <span id="redsSeguidos">0</span></p>
+    <p>⛔ Reds seguidos nas últimas 24h: <span id="redsSeguidos24h">0</span></p>
     <p>🔴 Recorde de reds seguidos: <span id="recordeReds">0</span></p>
-    <p>📈 Assertividade: <span id="assertividade">0</span>%</p>
-    <p>🕒 Rodadas registradas: <span id="rodadaAtual">0</span></p>
+    <p>📈 Assertividade: <span id="assertividade">0%</span></p>
+    <p>🕒 Rodadas registradas: <span id="rodadasRegistradas">0</span></p>
   </div>
 
-  <h3>📋 Histórico</h3>
-  <div id="historico"></div>
+  <div class="history">
+    <h3>📋 Histórico</h3>
+    <ul id="historico"></ul>
+  </div>
 
-  <button class="reset" onclick="resetar()">🔄 Resetar tudo</button>
+  <button class="reset-btn" onclick="resetarTudo()">🔄 Resetar tudo</button>
 
   <script>
     let rodada = 0;
-    let greensTotais = 0;
-    let greensDiretos = 0;
-    let greensGale1 = 0;
-    let reds24h = 0;
-    let redsSeguidos = 0;
-    let recordeReds = 0;
-    let historico = [];
+    let stats = {
+      greens: 0,
+      greensDiretos: 0,
+      greensGale1: 0,
+      reds24h: 0,
+      redsSeguidos24h: 0,
+      recordeReds: 0,
+      assertividade: 0,
+      rodadas: 0,
+      historico: [],
+      streakRedAtual: 0
+    };
+    let sinalAtual = '';
+    let galeUsado = false;
 
-    function registrar(sinal) {
+    function registrarSinal(sinal) {
+      sinalAtual = sinal;
+      document.getElementById("rodada-num").innerText = rodada + 1;
+      document.getElementById("resultado-opcoes").style.display = "block";
+    }
+
+    function registrarResultado(resultado) {
+      document.getElementById("resultado-opcoes").style.display = "none";
       rodada++;
-      const resultado = prompt(`Rodada ${rodada}: Resultado (Casa, Visitante ou Empate)?`);
+      stats.rodadas++;
 
-      let resultadoFinal = resultado?.trim()?.toLowerCase();
-      let sinalFinal = sinal.toLowerCase();
+      let green = false;
 
-      if (!resultadoFinal || !["casa", "visitante", "empate"].includes(resultadoFinal)) {
-        alert("Resultado inválido.");
-        rodada--;
+      if (resultado === 'Empate') {
+        green = true;
+        stats.greens++;
+        if (!galeUsado) stats.greensDiretos++;
+        else stats.greensGale1++;
+        stats.streakRedAtual = 0;
+      } else if (resultado === sinalAtual) {
+        green = true;
+        stats.greens++;
+        if (!galeUsado) stats.greensDiretos++;
+        else stats.greensGale1++;
+        stats.streakRedAtual = 0;
+      } else if (!galeUsado) {
+        galeUsado = true;
+        document.getElementById("rodada-num").innerText = rodada + 1;
+        document.getElementById("resultado-opcoes").style.display = "block";
         return;
-      }
-
-      let isGreen = false;
-      let gale = false;
-
-      if (resultadoFinal === sinalFinal || resultadoFinal === "empate") {
-        greensTotais++;
-        greensDiretos++;
-        isGreen = true;
-        redsSeguidos = 0;
       } else {
-        const galeResultado = prompt("Gale 1 - Resultado (Casa, Visitante ou Empate)?");
-        let galeFinal = galeResultado?.trim()?.toLowerCase();
-
-        if (galeFinal === sinalFinal || galeFinal === "empate") {
-          greensTotais++;
-          greensGale1++;
-          isGreen = true;
-          gale = true;
-          redsSeguidos = 0;
-        } else {
-          reds24h++;
-          redsSeguidos++;
-          if (redsSeguidos > recordeReds) {
-            recordeReds = redsSeguidos;
-          }
+        stats.reds24h++;
+        stats.streakRedAtual++;
+        if (stats.streakRedAtual > stats.recordeReds) {
+          stats.recordeReds = stats.streakRedAtual;
         }
+        galeUsado = false;
       }
 
-      historico.push({
-        rodada,
-        sinal,
-        resultado,
-        gale: gale ? "Sim" : "Não",
-        green: isGreen ? "✅" : "❌"
-      });
+      if (green) galeUsado = false;
 
-      atualizarTela();
+      atualizarEstatisticas();
+      adicionarHistorico(sinalAtual, resultado, green);
     }
 
-    function atualizarTela() {
-      document.getElementById("rodadaAtual").textContent = rodada;
-      document.getElementById("greensTotais").textContent = greensTotais;
-      document.getElementById("greensDiretos").textContent = greensDiretos;
-      document.getElementById("greensGale1").textContent = greensGale1;
-      document.getElementById("reds24h").textContent = reds24h;
-      document.getElementById("redsSeguidos").textContent = redsSeguidos;
-      document.getElementById("recordeReds").textContent = recordeReds;
+    function atualizarEstatisticas() {
+      const assertividade = stats.rodadas > 0 ? ((stats.greens / stats.rodadas) * 100).toFixed(1) : 0;
 
-      let totalEntradas = greensTotais + reds24h;
-      let assertividade = totalEntradas > 0 ? ((greensTotais / totalEntradas) * 100).toFixed(1) : 0;
-      document.getElementById("assertividade").textContent = assertividade;
-
-      const histDiv = document.getElementById("historico");
-      histDiv.innerHTML = "";
-      historico.slice().reverse().forEach(item => {
-        histDiv.innerHTML += `<p>Rodada ${item.rodada}: ${item.green} - Sinal: ${item.sinal} | Resultado: ${item.resultado} | Gale: ${item.gale}</p>`;
-      });
+      document.getElementById("greens").innerText = stats.greens;
+      document.getElementById("greensDiretos").innerText = stats.greensDiretos;
+      document.getElementById("greensGale1").innerText = stats.greensGale1;
+      document.getElementById("reds24h").innerText = stats.reds24h;
+      document.getElementById("redsSeguidos24h").innerText = stats.streakRedAtual;
+      document.getElementById("recordeReds").innerText = stats.recordeReds;
+      document.getElementById("assertividade").innerText = assertividade + "%";
+      document.getElementById("rodadasRegistradas").innerText = stats.rodadas;
     }
 
-    function resetar() {
-      if (confirm("Deseja realmente resetar todos os dados?")) {
-        rodada = 0;
-        greensTotais = 0;
-        greensDiretos = 0;
-        greensGale1 = 0;
-        reds24h = 0;
-        redsSeguidos = 0;
-        recordeReds = 0;
-        historico = [];
-        atualizarTela();
-      }
+    function adicionarHistorico(sinal, resultado, green) {
+      const li = document.createElement("li");
+      li.innerText = `Rodada ${rodada}: Sinal ${sinal}, Resultado ${resultado} - ${green ? '✅ GREEN' : '❌ RED'}`;
+      document.getElementById("historico").appendChild(li);
+    }
+
+    function resetarTudo() {
+      if (!confirm("Tem certeza que deseja resetar tudo?")) return;
+      rodada = 0;
+      stats = {
+        greens: 0,
+        greensDiretos: 0,
+        greensGale1: 0,
+        reds24h: 0,
+        redsSeguidos24h: 0,
+        recordeReds: 0,
+        assertividade: 0,
+        rodadas: 0,
+        historico: [],
+        streakRedAtual: 0
+      };
+      document.getElementById("historico").innerHTML = '';
+      atualizarEstatisticas();
     }
   </script>
+
 </body>
 </html>
