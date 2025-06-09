@@ -1,3 +1,4 @@
+<!-- Código completo já com a lógica corrigida -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -9,7 +10,6 @@
       font-family: Arial, sans-serif;
       background-color: #f1f5f9;
       text-align: center;
-      margin: 0;
       padding: 20px;
     }
     h1 { margin-top: 0; }
@@ -92,8 +92,8 @@
 <script>
   let rodada = 0;
   let sinalAtual = '';
-  let esperandoGale = false;
-  let resultadoPrimeira = '';
+  let aguardandoMartingale = false;
+  let resultadoRodada = '';
   let stats = JSON.parse(localStorage.getItem('statsFS')) || {
     greens: 0,
     greensGale: 0,
@@ -108,28 +108,34 @@
 
   function registrarSinal(sinal) {
     sinalAtual = sinal;
-    resultadoPrimeira = '';
-    esperandoGale = false;
-    document.getElementById("pergunta").innerText = "Qual foi o resultado?";
+    resultadoRodada = '';
+    aguardandoMartingale = false;
+    document.getElementById("pergunta").innerText = "Qual foi o resultado da rodada?";
     document.getElementById("resultado-opcoes").style.display = "block";
   }
 
   function registrarResultado(resultado) {
-    if (!esperandoGale) {
-      resultadoPrimeira = resultado;
-      document.getElementById("pergunta").innerText = "Qual foi o resultado do Martingale?";
-      esperandoGale = true;
+    if (!aguardandoMartingale) {
+      resultadoRodada = resultado;
+      if (resultadoRodada === "Empate" || resultadoRodada === sinalAtual) {
+        // Green direto
+        rodada++;
+        stats.rodadas++;
+        stats.greens++;
+        adicionarHistorico("green");
+        finalizar();
+      } else {
+        // Vai para o Martingale
+        aguardandoMartingale = true;
+        document.getElementById("pergunta").innerText = "Qual foi o resultado do Martingale?";
+      }
       return;
     }
 
-    document.getElementById("resultado-opcoes").style.display = "none";
+    // Segundo clique: resultado do Martingale
     rodada++;
     stats.rodadas++;
-
-    if (resultadoPrimeira === "Empate" || resultadoPrimeira === sinalAtual) {
-      stats.greens++;
-      adicionarHistorico("green");
-    } else if (resultado === "Empate" || resultado === sinalAtual) {
+    if (resultado === "Empate" || resultado === sinalAtual) {
       stats.greensGale++;
       adicionarHistorico("green-gale");
     } else {
@@ -137,6 +143,11 @@
       adicionarHistorico("red");
     }
 
+    finalizar();
+  }
+
+  function finalizar() {
+    document.getElementById("resultado-opcoes").style.display = "none";
     atualizarEstatisticas();
     renderizarHistoricoVisual();
     salvarDados();
@@ -195,7 +206,7 @@
     rodada--;
     stats.rodadas--;
 
-    if (ultima.resultado === 'red' || ultima.resultado === 'black') stats.reds--;
+    if (ultima.resultado === 'black') stats.reds--;
     else if (ultima.resultado === 'empate') stats.greensGale--;
     else stats.greens--;
 
@@ -204,6 +215,7 @@
     salvarDados();
   }
 
+  // Carrega dados ao iniciar
   atualizarEstatisticas();
   renderizarHistoricoVisual();
 </script>
